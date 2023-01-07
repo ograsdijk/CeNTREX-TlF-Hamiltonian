@@ -30,6 +30,7 @@ from .generate_hamiltonian import (
     generate_uncoupled_hamiltonian_X_function,
 )
 from .utils import matrix_to_states, reduced_basis_hamiltonian, reorder_evecs
+from .matrix_elements import generate_ED_ME_mixed_state
 
 __all__ = [
     "generate_diagonalized_hamiltonian",
@@ -123,7 +124,7 @@ def generate_reduced_X_hamiltonian(
 
     # need to generate the other states in case of mixing
     _Jmin = min([gs.J for gs in X_states_approx]) if Jmin is None else Jmin
-    _Jmax = max([gs.J for gs in X_states_approx]) + 2 if Jmax is None else Jmax
+    _Jmax = max([gs.J for gs in X_states_approx]) if Jmax is None else Jmax
 
     QN = generate_uncoupled_states_ground(
         Js=np.arange(_Jmin, _Jmax + 1), nuclear_spins=nuclear_spins
@@ -388,6 +389,8 @@ def generate_reduced_hamiltonian_transitions(
     Xconstants: XConstants = XConstants(),
     Bconstants: BConstants = BConstants(),
     nuclear_spins: TlFNuclearSpins = TlFNuclearSpins(),
+    minimum_amplitude: float = 5e-3,
+    minimum_coupling: float = 1e-3,
 ) -> ReducedHamiltonian:
     _J_ground: List[int] = []
     excited_states_selectors = []
@@ -410,16 +413,30 @@ def generate_reduced_hamiltonian_transitions(
                 nuclear_spins=nuclear_spins,
             )
 
-            # figure out which ground states are involved
-            excited_states = [s.remove_small_components(1e-3) for s in excited_states]
-            # only couplings to opposite parities are allowed
+            # figure out which excited states are involved
+            excited_states = [
+                s.remove_small_components(minimum_amplitude) for s in excited_states
+            ]
+
             Js_excited: npt.NDArray[np.int_] = np.unique(
                 [s.J for es in excited_states for a, s in es]
             )
-            Js_ground = list(
-                np.arange(Js_excited.min() - 1, Js_excited.max() + 2).astype(int)
+            if Jmax_X is None:
+                _Jmax_X = Js_excited.max() + 2
+            else:
+                _Jmax_X = Jmax_X
+            ground_states = generate_coupled_states_ground(
+                Js=np.arange(0, _Jmax_X + 1).astype(int)
             )
-            Js_ground = [J for J in Js_ground if (-1) ** J == transition.P_ground]
+            # calculate the coupling between the ground and excited states to determine
+            # which states to include
+            nonzero_coupling = []
+            for gs in ground_states:
+                for es in excited_states:
+                    if generate_ED_ME_mixed_state(1 * gs, es) >= minimum_coupling:
+                        nonzero_coupling.append(gs)
+
+            Js_ground = list(np.unique([s.J for s in nonzero_coupling]))
 
             _J_ground.extend(Js_ground)
             excited_states_selectors.append(excited_states_approx_qn_select)

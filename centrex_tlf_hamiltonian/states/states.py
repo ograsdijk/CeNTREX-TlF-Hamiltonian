@@ -147,13 +147,10 @@ class CoupledBasisState(BasisState):
                 f"UncoupledBasisState (not {type(other)})"
             )
         if other.isCoupled:
-            if self.basis == other.basis:
-                if self == other:
-                    return 1
-                else:
-                    return 0
+            if self == other:
+                return 1
             else:
-                raise TypeError("can only matmul BasisStates with the same basis")
+                return 0
         else:
             return State([(1, other)]) @ self.transform_to_uncoupled()
 
@@ -165,7 +162,7 @@ class CoupledBasisState(BasisState):
             if self.basis == other.basis:
                 return State([(1, self), (1, other)])
             else:
-                raise TypeError("can only add BasisStates withe same basis")
+                raise TypeError("can only add BasisStates with the same basis")
         else:
             raise TypeError(
                 f"can only add CoupledBasisState (not {type(other)}) "
@@ -550,6 +547,7 @@ class UncoupledBasisState(BasisState):
                 and self.Omega == other.Omega
                 and self.P == other.P
                 and self.electronic_state == other.electronic_state
+                and self.basis == other.basis
             )
 
     # inner product
