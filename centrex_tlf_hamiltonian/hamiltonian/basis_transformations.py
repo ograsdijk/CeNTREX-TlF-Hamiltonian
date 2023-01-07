@@ -14,7 +14,6 @@ def generate_transform_matrix(
     """
     Function that generates a transform matrix that takes Hamiltonian expressed
     in basis1 to basis2: H_2 = S.conj().T @ H_1 @ S
-    Retrieved from a pre-calculated sqlite3 database.
 
     inputs:
     basis1 = list of basis states that defines basis1

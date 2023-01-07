@@ -123,7 +123,7 @@ def generate_reduced_X_hamiltonian(
 
     # need to generate the other states in case of mixing
     _Jmin = min([gs.J for gs in X_states_approx]) if Jmin is None else Jmin
-    _Jmax = max([gs.J for gs in X_states_approx]) if Jmax is None else Jmax
+    _Jmax = max([gs.J for gs in X_states_approx]) + 2 if Jmax is None else Jmax
 
     QN = generate_uncoupled_states_ground(
         Js=np.arange(_Jmin, _Jmax + 1), nuclear_spins=nuclear_spins
@@ -478,4 +478,3 @@ def generate_reduced_hamiltonian_transitions(
         B_states_basis=excited_states_approx,
         QN_basis=ground_states_approx + excited_states_approx,
     )
-

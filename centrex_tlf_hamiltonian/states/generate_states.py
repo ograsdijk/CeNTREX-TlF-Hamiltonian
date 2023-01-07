@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 from typing import Any, List, Tuple, Union, Optional
+from collections.abc import Iterable
 
 import numpy as np
 import numpy.typing as npt
@@ -100,6 +101,7 @@ def generate_coupled_states_ground(
                 electronic_state=ElectronicState.X,
                 P=parity_X(J),
                 Omega=0,
+                basis=Basis.Coupled,
             )
             for J in Js
             for F1 in np.arange(np.abs(J - I_F), J + I_F + 1)
@@ -115,10 +117,14 @@ def generate_coupled_states_excited(
     Ps: Union[int, List[int], Tuple[int]] = 1,
     Omegas: Union[int, List[int], Tuple[int]] = 1,
     nuclear_spins: TlFNuclearSpins = TlFNuclearSpins(),
+    basis: Optional[Basis] = None,
 ) -> npt.NDArray[Any]:
     I_Tl = nuclear_spins.I_Tl
     I_F = nuclear_spins.I_F
-    if not isinstance(Ps, (list, tuple)):
+
+    if basis == Basis.CoupledΩ:
+        _Ps = [None]
+    elif not isinstance(Ps, (list, tuple)):
         _Ps = [Ps]
     else:
         _Ps = list(Ps)
@@ -126,6 +132,12 @@ def generate_coupled_states_excited(
         _Omegas = [Omegas]
     else:
         _Omegas = list(Omegas)
+
+    if len(_Omegas) > 1 and Ps is not None:
+        raise ValueError("Cannot supply both Ω and P, need to pick a basis")
+    elif Ps is not None and len(_Omegas) > 1:
+        raise ValueError("Cannot supply both Ω and P, need to pick a basis")
+
     QN = np.array(
         [
             CoupledBasisState(
@@ -138,6 +150,7 @@ def generate_coupled_states_excited(
                 electronic_state=ElectronicState.B,
                 P=P,
                 Omega=Omega,
+                basis=basis,
             )
             for J in Js
             for F1 in np.arange(np.abs(J - I_F), J + I_F + 1)
@@ -228,7 +241,7 @@ def generate_coupled_states_base(
 def generate_coupled_states_X(
     qn_selector: Union[QuantumSelector, List[QuantumSelector], npt.NDArray[Any]],
     nuclear_spins: TlFNuclearSpins = TlFNuclearSpins(),
-    basis: Optional[Basis] = None,
+    basis: Basis = Basis.Coupled,
 ) -> npt.NDArray[Any]:
     """generate ground X state CoupledBasisStates for the quantum numbers given
     by qn_selector
@@ -266,6 +279,18 @@ def generate_coupled_states_X(
         )
 
 
+def check_B_basis(P, Ω):
+    if P is None and Ω is None:
+        raise ValueError("Need to supply P and Ω to determine the basis")
+    elif isinstance(Ω, Iterable):
+        if isinstance(P, Iterable) and len(P) > 1:
+            raise ValueError("Cannot supply both Ω and P, need to pick a basis")
+        elif P is not None:
+            raise ValueError("Cannot supply both Ω and P, need to pick a basis")
+    else:
+        return
+
+
 def generate_coupled_states_B(
     qn_selector: Union[QuantumSelector, List[QuantumSelector], npt.NDArray[Any]],
     nuclear_spins: TlFNuclearSpins = TlFNuclearSpins(),
@@ -286,6 +311,7 @@ def generate_coupled_states_B(
         qns = copy.copy(qn_selector)
         qns.Ω = 1 if qns.Ω is None else qns.Ω
         qns.electronic = ElectronicState.B
+        check_B_basis(qns.P, qns.Ω)
         return generate_coupled_states_base(qns, nuclear_spins=nuclear_spins)
     elif isinstance(qn_selector, (list, np.ndarray)):
         coupled_states = []
@@ -293,6 +319,7 @@ def generate_coupled_states_B(
             qns = copy.copy(qns)
             qns.Ω = 1 if qns.Ω is None else qns.Ω
             qns.electronic = ElectronicState.B
+            check_B_basis(qns.P, qns.Ω)
             coupled_states.append(
                 generate_coupled_states_base(
                     qns, nuclear_spins=nuclear_spins, basis=basis

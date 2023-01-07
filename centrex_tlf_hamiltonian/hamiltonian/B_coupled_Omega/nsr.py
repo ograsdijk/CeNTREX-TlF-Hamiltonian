@@ -1,10 +1,14 @@
+from functools import lru_cache
+
 import numpy as np
+
 from centrex_tlf_hamiltonian.states import CoupledBasisState, State
 
 from ..constants import BConstants
 from ..wigner import sixj_f
 
 
+@lru_cache(maxsize=int(1e6))
 def H_c_Tl(psi: CoupledBasisState, constants: BConstants) -> State:
     """
     Calculates the effect of the c1 term on the input basis state

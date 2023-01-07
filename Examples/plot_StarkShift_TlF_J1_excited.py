@@ -3,7 +3,7 @@ import numpy as np
 from centrex_tlf_hamiltonian import hamiltonian, states
 
 # generate the hyperfine sublevels in J=0 to J=6
-QN = states.generate_coupled_states_excited(Js=np.arange(1, 5), Ps=[1], Omegas=[-1, 1])
+QN = states.generate_coupled_states_excited(Js=np.arange(1, 5), Ps=None, Omegas=[-1, 1])
 
 # generate the X hamiltonian terms
 H = hamiltonian.generate_coupled_hamiltonian_B(QN)
@@ -38,17 +38,19 @@ for idx, Ei in enumerate(Ez):
     energy[idx, :] = E[indices]
     V_track[:, :] = V[:, indices]
 
+# transform to parity basis
+QN_states_parity = [s.transform_to_parity_basis() for s in QN_states]
+
 # indices of the J'=1, F1'=1/2, F'=1 states
 indices_J1_F1_32_F_1 = [
     idx
-    for idx, s in enumerate(QN_states)
+    for idx, s in enumerate(QN_states_parity)
     if s.largest.J == 1
     and s.largest.F == 1
     and s.largest.F1 == 1 / 2
     and s.largest.Omega == 1
     and s.largest.P == 1
 ]
-
 
 # plot the J'=1, F1'=1/2, F'=1 Stark curves
 fig, ax = plt.subplots(figsize=(12, 8))

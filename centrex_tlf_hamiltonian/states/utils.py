@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Tuple
+from typing import Tuple, Sequence, Union, Any
 import numpy as np
 import numpy.typing as npt
 from sympy.physics.quantum.cg import CG
@@ -42,3 +42,25 @@ def reorder_evecs(
     V_out = V_in[:, index]
 
     return E_out, V_out
+
+
+def get_unique_list(
+    states: Union[Sequence[Any], npt.NDArray[Any]]
+) -> Union[Sequence[Any], npt.NDArray[Any]]:
+    """get a list/array of unique entries in the list/array
+
+    Args:
+        states (Union[list, np.ndarray]): list/array
+
+    Returns:
+        Union[list, np.ndarray]: list/array with unique entries
+    """
+    states_unique = []
+    for state in states:
+        if state not in states_unique:
+            states_unique.append(state)
+
+    if isinstance(states, np.ndarray):
+        return np.asarray(states_unique)
+    else:
+        return states_unique

@@ -5,7 +5,12 @@ from typing import Callable, Sequence, Any, Union, List
 
 import numpy as np
 import numpy.typing as npt
-from centrex_tlf_hamiltonian.states import CoupledBasisState, UncoupledBasisState, Basis
+from centrex_tlf_hamiltonian.states import (
+    CoupledBasisState,
+    UncoupledBasisState,
+    Basis,
+    State,
+)
 
 from . import B_coupled, X_uncoupled, B_coupled_Omega
 from .constants import BConstants, HamiltonianConstants, XConstants
@@ -35,6 +40,25 @@ def HMatElems(
         for j in range(i, len(QN)):
             b = QN[j]
             val = (1 * a) @ H(b, constants)
+            result[i, j] = val
+            if i != j:
+                result[j, i] = np.conjugate(val)
+    return result
+
+
+def HMatElemsBCoupledP(
+    H: Callable,
+    QN: Union[Sequence[CoupledBasisState], npt.NDArray[Any]],
+    constants: HamiltonianConstants,
+) -> npt.NDArray[np.complex128]:
+    result = np.zeros((len(QN), len(QN)), dtype=complex)
+    for i, a in enumerate(QN):
+        for j in range(i, len(QN)):
+            val = 0j
+            b = QN[j]
+            for ampa, ai in a:
+                for ampb, bi in b:
+                    val += ampa * ampb * (1 * ai) @ H(bi, constants)
             result[i, j] = val
             if i != j:
                 result[j, i] = np.conjugate(val)
@@ -127,7 +151,7 @@ def generate_coupled_hamiltonian_B(
     basis states.
 
     Args:
-        QN (array): array of UncoupledBasisStates
+        QN (array): array of CoupledBasisStates
 
     Returns:
         HamiltonianCoupledB: dataclass to hold coupled B hamiltonian terms
@@ -135,19 +159,24 @@ def generate_coupled_hamiltonian_B(
     for qn in QN:
         assert qn.isCoupled, "supply list withCoupledBasisStates"
     if all([qn.basis == Basis.CoupledP for qn in QN]):
-        return HamiltonianCoupledBP(
-            HMatElems(B_coupled.Hrot, QN, constants),
-            HMatElems(B_coupled.H_mhf_Tl, QN, constants),
-            HMatElems(B_coupled.H_mhf_F, QN, constants),
-            HMatElems(B_coupled.H_LD, QN, constants),
-            HMatElems(B_coupled.H_cp1_Tl, QN, constants),
-            HMatElems(B_coupled.H_c_Tl, QN, constants),
-            HMatElems(B_coupled.HSx, QN, constants),
-            HMatElems(B_coupled.HSy, QN, constants),
-            HMatElems(B_coupled.HSz, QN, constants),
-            HMatElems(B_coupled.HZx, QN, constants),
-            HMatElems(B_coupled.HZy, QN, constants),
-            HMatElems(B_coupled.HZz, QN, constants),
+        # raise NotImplementedError(
+        #     "Generating the hamiltonian in the CoupledP basis is not yet implemented."
+        # )
+        QN_omega = [s.transform_to_omega_basis() for s in QN]
+
+        return HamiltonianCoupledBOmega(
+            HMatElemsBCoupledP(B_coupled_Omega.rotational.Hrot, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.mhf.H_mhf_Tl, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.mhf.H_mhf_F, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.ld.H_LD, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.ld.H_cp1_Tl, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.nsr.H_c_Tl, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.stark.HSx, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.stark.HSy, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.stark.HSz, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.zeeman.HZx, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.zeeman.HZy, QN_omega, constants),
+            HMatElemsBCoupledP(B_coupled_Omega.zeeman.HZz, QN_omega, constants),
         )
     elif all([qn.basis == Basis.CoupledΩ for qn in QN]):
         return HamiltonianCoupledBOmega(

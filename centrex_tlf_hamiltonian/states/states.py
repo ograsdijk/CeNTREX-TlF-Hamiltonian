@@ -31,6 +31,7 @@ class ElectronicState(Enum):
 
 class Basis(Enum):
     Uncoupled = auto()
+    Coupled = auto()
     CoupledP = auto()
     CoupledΩ = auto()
 
@@ -113,7 +114,7 @@ class CoupledBasisState(BasisState):
         elif self.electronic_state == ElectronicState.B:
             self.basis = Basis.CoupledP
         elif self.electronic_state == ElectronicState.X:
-            self.basis = Basis.CoupledP
+            self.basis = Basis.Coupled
         else:
             self.basis = None
         self.v = v
@@ -135,6 +136,7 @@ class CoupledBasisState(BasisState):
                 and self.P == other.P
                 and self.electronic_state == other.electronic_state
                 and self.v == other.v
+                and self.basis == other.basis
             )
 
     # inner product
@@ -145,10 +147,13 @@ class CoupledBasisState(BasisState):
                 f"UncoupledBasisState (not {type(other)})"
             )
         if other.isCoupled:
-            if self == other:
-                return 1
+            if self.basis == other.basis:
+                if self == other:
+                    return 1
+                else:
+                    return 0
             else:
-                return 0
+                raise TypeError("can only matmul BasisStates with the same basis")
         else:
             return State([(1, other)]) @ self.transform_to_uncoupled()
 
@@ -157,7 +162,10 @@ class CoupledBasisState(BasisState):
         if self == other:
             return State([(2, self)])
         elif isinstance(other, CoupledBasisState):
-            return State([(1, self), (1, other)])
+            if self.basis == other.basis:
+                return State([(1, self), (1, other)])
+            else:
+                raise TypeError("can only add BasisStates withe same basis")
         else:
             raise TypeError(
                 f"can only add CoupledBasisState (not {type(other)}) "
@@ -169,7 +177,10 @@ class CoupledBasisState(BasisState):
         if self == other:
             return 0
         elif isinstance(other, CoupledBasisState):
-            return State([(1, self), (-1, other)])
+            if self.basis == other.basis:
+                return State([(1, self), (-1, other)])
+            else:
+                raise TypeError("can only add BasisStates withe same basis")
         else:
             raise TypeError(
                 f"can only subtract CoupledBasisState (not {type(other)}) "
@@ -188,7 +199,8 @@ class CoupledBasisState(BasisState):
         if self.P is not None:
             P = self.P
         else:
-            P = 0
+            # parity 2 for the hash if the parity isn't defined
+            P = 2
         ev = self.electronic_state.value if self.electronic_state is not None else 0
         quantum_numbers = (
             int(self.J),
@@ -365,22 +377,101 @@ class CoupledBasisState(BasisState):
             )
 
             state = 1 / np.sqrt(2) * (state_plus + P * (-1) ** (J) * state_minus)
-        elif (
-            self.basis == Basis.CoupledP and self.electronic_state == ElectronicState.X
+            return state
+
+        elif self.basis == Basis.Coupled and self.electronic_state == ElectronicState.X:
+            raise ValueError("Cannot transform X state to Omega basis")
+        else:
+            raise ValueError("Cannot transform to Omega basis")
+
+    def transform_to_parity_basis(self):
+        """
+        Transforms self from Omega eigenstate basis (i.e. signed Omega) to
+        parity eigenstate basis (unsigned Omega, P is good quantum number).
+        Doing this is only defined for electronic state B.
+        """
+        F = self.F
+        mF = self.mF
+        F1 = self.F1
+        J = self.J
+        I1 = self.I1
+        I2 = self.I2
+        electronic_state = self.electronic_state
+        P = self.P
+        Omega = self.Omega
+        S = 0
+
+        # Check that not already in parity basis
+
+        if (self.basis == Basis.CoupledΩ) or (
+            P is None and not electronic_state == ElectronicState.X
         ):
-            state = 1 * CoupledBasisState(
-                F,
-                mF,
-                F1,
-                J,
-                I1,
-                I2,
-                Omega=Omega,
-                P=None,
-                electronic_state=electronic_state,
-                basis=Basis.CoupledΩ,
-                v=self.v,
-            )
+            if np.sign(Omega) == 1:
+                state = (
+                    1
+                    / np.sqrt(2)
+                    * (
+                        1
+                        * CoupledBasisState(
+                            F,
+                            mF,
+                            F1,
+                            J,
+                            I1,
+                            I2,
+                            Omega=np.abs(Omega),
+                            P=+1,
+                            electronic_state=electronic_state,
+                        )
+                        + 1
+                        * CoupledBasisState(
+                            F,
+                            mF,
+                            F1,
+                            J,
+                            I1,
+                            I2,
+                            Omega=np.abs(Omega),
+                            P=-1,
+                            electronic_state=electronic_state,
+                        )
+                    )
+                )
+
+            elif np.sign(Omega) == -1:
+                state = (
+                    1
+                    / np.sqrt(2)
+                    * (-1) ** (J - S)
+                    * (
+                        1
+                        * CoupledBasisState(
+                            F,
+                            mF,
+                            F1,
+                            J,
+                            I1,
+                            I2,
+                            Omega=np.abs(Omega),
+                            P=+1,
+                            electronic_state=electronic_state,
+                        )
+                        - 1
+                        * CoupledBasisState(
+                            F,
+                            mF,
+                            F1,
+                            J,
+                            I1,
+                            I2,
+                            Omega=np.abs(Omega),
+                            P=-1,
+                            electronic_state=electronic_state,
+                        )
+                    )
+                )
+        else:
+            state = 1 * self
 
         return state
 

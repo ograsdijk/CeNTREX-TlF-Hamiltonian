@@ -8,7 +8,7 @@ from centrex_tlf_hamiltonian.states.states import ElectronicState
 def test_gfactor_B_hamiltonian():
     # generate the hyperfine sublevels in J=0 to J=3
     QN = states.generate_coupled_states_excited(
-        Js=np.arange(1, 4), Ps=[1], Omegas=[-1, 1]
+        Js=np.arange(1, 4), Ps=[-1, 1], Omegas=1, basis=states.Basis.CoupledP
     )
 
     # generate the X hamiltonian terms
@@ -142,14 +142,14 @@ def test_gfactor_B_hamiltonian():
         gFactors[indices_states],
         np.array(
             [
-                3.14076199e-04,
-                3.21403834e-01,
-                2.53548585e-01,
-                1.41944059e-01,
-                1.10762736e-01,
-                7.64865408e-02,
-                4.25550860e-01,
-                2.54490909e-01,
+                3.14075269e-04,
+                3.21404093e-01,
+                2.53551426e-01,
+                1.41945999e-01,
+                1.10764994e-01,
+                7.64882501e-02,
+                4.25547758e-01,
+                2.54489133e-01,
             ]
         ),
     )

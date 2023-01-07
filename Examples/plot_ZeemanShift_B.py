@@ -3,7 +3,9 @@ import numpy as np
 from centrex_tlf_hamiltonian import hamiltonian, states
 
 # generate the hyperfine sublevels in J=0 to J=4
-QN = states.generate_coupled_states_excited(Js=np.arange(1, 5), Ps=[1], Omegas=[-1, 1])
+QN = states.generate_coupled_states_excited(
+    Js=np.arange(1, 5), Ps=None, Omegas=[-1, 1], basis=states.Basis.CoupledΩ
+)
 
 
 # generate the X hamiltonian terms
@@ -39,10 +41,11 @@ for idx, Bi in enumerate(Bz):
     energy[idx, :] = E[indices]
     V_track[:, :] = V[:, indices]
 
+QN_states_parity = [s.transform_to_parity_basis() for s in QN_states]
 # indices of the J'=1 states
 indices_J1 = [
     idx
-    for idx, s in enumerate(QN_states)
+    for idx, s in enumerate(QN_states_parity)
     if s.largest.J == 1 and s.largest.Omega == 1 and s.largest.P == 1
 ]
 

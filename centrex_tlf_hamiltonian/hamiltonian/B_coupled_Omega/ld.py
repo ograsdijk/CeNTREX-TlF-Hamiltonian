@@ -1,10 +1,14 @@
+from functools import lru_cache
+
 import numpy as np
+
 from centrex_tlf_hamiltonian.states import CoupledBasisState, State
 
 from ..constants import BConstants
 from ..wigner import sixj_f, threej_f
 
 
+@lru_cache(maxsize=int(1e6))
 def H_LD(psi: CoupledBasisState, constants: BConstants) -> State:
     """
     Calculates the "q-term" that couples states with opposite Omega
@@ -34,7 +38,7 @@ def H_LD(psi: CoupledBasisState, constants: BConstants) -> State:
 
     return State([(amp, ket)])
 
-
+@lru_cache(maxsize=int(1e6))
 def H_cp1_Tl(psi: CoupledBasisState, constants: BConstants) -> State:
     """
     Calculates the lambda-doubling nuclear spin - rotation term

@@ -1,10 +1,12 @@
+from functools import lru_cache
+
 import numpy as np
 from centrex_tlf_hamiltonian.states import CoupledBasisState, State
 
 from ..constants import BConstants
 from ..wigner import sixj_f, threej_f
 
-
+@lru_cache(maxsize=int(1e6))
 def H_mhf_Tl(psi: CoupledBasisState, constants: BConstants) -> State:
     """
     Operator for magnetic hyperfine term for Tl nucleus.
@@ -60,7 +62,7 @@ def H_mhf_Tl(psi: CoupledBasisState, constants: BConstants) -> State:
 
     return State(data)
 
-
+@lru_cache(maxsize=int(1e6))
 def H_mhf_F(psi: CoupledBasisState, constants: BConstants) -> State:
     """
     Operator for magnetic hyperfine term for F nucleus.

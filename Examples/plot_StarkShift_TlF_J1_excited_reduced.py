@@ -1,16 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
+
 from centrex_tlf_hamiltonian import hamiltonian, states
 from centrex_tlf_hamiltonian.states.generate_states import generate_coupled_states_B
-from tqdm import tqdm
 
 # generate the hyperfine sublevels in J=1
 qn_select = states.QuantumSelector(J=1, F1=1 / 2, F=1, P=+1, Ω=1)
 QN = generate_coupled_states_B(qn_select)
 
-# generate the X hamiltonian terms
+# generate the B hamiltonian terms
 qnc = states.generate_coupled_states_excited(
-    Js=np.arange(1, 6), Omegas=[-1, 1], Ps=[-1, 1]
+    Js=np.arange(1, 6), Ps=[-1, 1], Omegas=1, basis=states.Basis.CoupledP
 )
 H = hamiltonian.generate_coupled_hamiltonian_B(qnc)
 

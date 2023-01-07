@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 
 from .states import BasisState, CoupledBasisState, ElectronicState, State
-from .utils import reorder_evecs
+from .utils import reorder_evecs, get_unique_list
 
 
 __all__ = [
@@ -93,7 +93,7 @@ def find_state_idx_from_state(
 def find_closest_vector_idx(
     state_vec: npt.NDArray[np.complex128], vector_array: npt.NDArray[np.complex128]
 ) -> int:
-    """ Function that finds the index of the vector in vector_array that most closely
+    """Function that finds the index of the vector in vector_array that most closely
     matches state_vec. vector_array is array where each column is a vector, typically
     corresponding to an eigenstate of some Hamiltonian.
 
@@ -356,12 +356,4 @@ def get_unique_basisstates(
     Returns:
         Union[list, np.ndarray]: list/array of unique BasisStates
     """
-    states_unique = []
-    for state in states:
-        if state not in states_unique:
-            states_unique.append(state)
-
-    if isinstance(states, np.ndarray):
-        return np.asarray(states_unique)
-    else:
-        return states_unique
+    return get_unique_list(states)
