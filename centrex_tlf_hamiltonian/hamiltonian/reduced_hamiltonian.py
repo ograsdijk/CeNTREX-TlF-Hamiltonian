@@ -1,25 +1,28 @@
+import logging
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
-from centrex_tlf_hamiltonian.transitions import MicrowaveTransition, OpticalTransition
 import numpy as np
 import numpy.typing as npt
+from scipy import linalg
+
 from centrex_tlf_hamiltonian.states import (
+    Basis,
     CoupledBasisState,
     ElectronicState,
     QuantumSelector,
     State,
+    TlFNuclearSpins,
     find_exact_states,
     generate_uncoupled_states_ground,
+    get_unique_basisstates_from_states,
 )
-from centrex_tlf_hamiltonian.states.constants import TlFNuclearSpins
-from centrex_tlf_hamiltonian.states.find_states import QuantumSelector
 from centrex_tlf_hamiltonian.states.generate_states import (
     generate_coupled_states_B,
     generate_coupled_states_ground,
     generate_coupled_states_X,
 )
-from scipy import linalg
+from centrex_tlf_hamiltonian.transitions import MicrowaveTransition, OpticalTransition
 
 from .basis_transformations import generate_transform_matrix
 from .constants import BConstants, XConstants
@@ -29,8 +32,8 @@ from .generate_hamiltonian import (
     generate_uncoupled_hamiltonian_X,
     generate_uncoupled_hamiltonian_X_function,
 )
-from .utils import matrix_to_states, reduced_basis_hamiltonian, reorder_evecs
 from .matrix_elements import generate_ED_ME_mixed_state
+from .utils import matrix_to_states, reduced_basis_hamiltonian, reorder_evecs
 
 __all__ = [
     "generate_diagonalized_hamiltonian",
@@ -74,6 +77,18 @@ def generate_diagonalized_hamiltonian(
         return HamiltonianDiagonalized(hamiltonian_diagonalized, V, V_ref)
 
 
+@dataclass
+class ReducedHamiltonian:
+    H: npt.NDArray[np.complex128]
+    V: npt.NDArray[np.complex128]
+    QN_basis: Sequence[CoupledBasisState]
+    QN_construct: Sequence[CoupledBasisState]
+
+    def __iter__(self):
+        # suppot for legacy code
+        return iter((self.QN_basis, self.H))
+
+
 def generate_reduced_X_hamiltonian(
     X_states_approx: Sequence[CoupledBasisState],
     E: npt.NDArray[np.float64] = np.array([0.0, 0.0, 0.0]),
@@ -86,7 +101,7 @@ def generate_reduced_X_hamiltonian(
     nuclear_spins: TlFNuclearSpins = TlFNuclearSpins(),
     transform: npt.NDArray[np.complex_] = None,
     H_func: Optional[Callable] = None,
-) -> Tuple[List[State], npt.NDArray[np.complex128]]:
+) -> ReducedHamiltonian:
     """
     Generate the reduced X state hamiltonian.
     Generates the Hamiltonian for all X states from Jmin to Jmax, if provided. Otherwise
@@ -119,7 +134,7 @@ def generate_reduced_X_hamiltonian(
                                                 depending on E and B. Defaults to None.
 
     Returns:
-        Tuple[List[State], npt.NDArray[np.complex128]]: States and Hamiltonian
+        ReducedHamiltonian: States and Hamiltonian
     """
 
     # need to generate the other states in case of mixing
@@ -168,11 +183,11 @@ def generate_reduced_X_hamiltonian(
     )
     ground_states = [gs.remove_small_components(stol) for gs in ground_states]
 
-    # ground_states = [gs.remove_small_components() for gs in ground_states]
-
     H_X_red = reduced_basis_hamiltonian(QN_diag, H_diagonalized.H, ground_states)
 
-    return ground_states, H_X_red
+    return ReducedHamiltonian(
+        H=H_X_red, V=H_diagonalized.V, QN_basis=ground_states, QN_construct=list(QNc)
+    )
 
 
 def generate_reduced_B_hamiltonian(
@@ -186,7 +201,7 @@ def generate_reduced_B_hamiltonian(
     constants: BConstants = BConstants(),
     nuclear_spins: TlFNuclearSpins = TlFNuclearSpins(),
     H_func: Optional[Callable] = None,
-) -> Tuple[List[State], npt.NDArray[np.complex128]]:
+) -> ReducedHamiltonian:
     """
     Generate the reduced B state hamiltonian.
     Generates the Hamiltonian for all B states from Jmin to Jmax, if provided. Otherwise
@@ -215,20 +230,26 @@ def generate_reduced_B_hamiltonian(
                                                 depending on E and B. Defaults to None.
 
     Returns:
-        Tuple[List[State], npt.NDArray[np.complex128]]: States and Hamiltonian
+        ReducedHamiltonian: States and Hamiltonian
     """
     # need to generate the other states in case of mixing
     _Jmin = 1 if Jmin is None else Jmin
     _Jmax = max([gs.J for gs in B_states_approx]) + 2 if Jmax is None else Jmax
-    # crude check to see if on Omega basis or P basis
-    if any([qn.P is not None for qn in B_states_approx]):
-        qn_select = QuantumSelector(J=np.arange(_Jmin, _Jmax + 1), P=[-1, 1], Ω=1)
-    else:
-        qn_select = QuantumSelector(J=np.arange(_Jmin, _Jmax + 1), P=None, Ω=[-1, 1])
-    QN_B = list(generate_coupled_states_B(qn_select, nuclear_spins=nuclear_spins))
 
-    for qn in B_states_approx:
-        assert qn.isCoupled, "supply a Sequence of CoupledBasisStates"
+    omega_basis_flag = False
+
+    # check basis
+    if all([qn.basis == Basis.CoupledP for qn in B_states_approx]):
+        qn_select = QuantumSelector(J=np.arange(_Jmin, _Jmax + 1), P=[-1, 1], Ω=1)
+    elif all([qn.basis == Basis.CoupledΩ for qn in B_states_approx]):
+        qn_select = QuantumSelector(J=np.arange(_Jmin, _Jmax + 1), P=None, Ω=[-1, 1])
+        omega_basis_flag = True
+    else:
+        raise TypeError(
+            f"B_states_approx basis invalid, CoupledP or CoupledΩ are allowed, not "
+            f"{B_states_approx[0].basis}"
+        )
+    QN_B = list(generate_coupled_states_B(qn_select, nuclear_spins=nuclear_spins))
 
     if H_func is None:
         H_B = generate_coupled_hamiltonian_B(QN_B, constants=constants)
@@ -243,13 +264,26 @@ def generate_reduced_B_hamiltonian(
     # new set of quantum numbers:
     QN_B_diag = matrix_to_states(H_diagonalized.V, QN_B)
 
-    excited_states = find_exact_states(
-        [1 * e for e in B_states_approx], QN_B, QN_B_diag, V=H_diagonalized.V
-    )
-    excited_states = [es.remove_small_components(stol) for es in excited_states]
+    if omega_basis_flag:
+        logging.warning(
+            "generate_reduced_B_hamiltonian called in Ω basis; mapping states to "
+            "approximate states not implemented. Hamiltonian is not reduced."
+        )
+        excited_states = [es.remove_small_components(stol) for es in QN_B_diag]
+    else:
+        excited_states = find_exact_states(
+            [1 * e for e in B_states_approx], QN_B, QN_B_diag, V=H_diagonalized.V
+        )
+        excited_states = [es.remove_small_components(stol) for es in excited_states]
 
     H_B_red = reduced_basis_hamiltonian(QN_B_diag, H_diagonalized.H, excited_states)
-    return excited_states, H_B_red
+
+    return ReducedHamiltonian(
+        H=H_B_red,
+        V=H_diagonalized.V,
+        QN_basis=excited_states,
+        QN_construct=list(QN_B),
+    )
 
 
 def compose_reduced_hamiltonian(
@@ -267,15 +301,15 @@ def compose_reduced_hamiltonian(
 
 
 @dataclass
-class ReducedHamiltonian:
+class ReducedHamiltonianTotal:
     X_states: List[State]
     B_states: List[State]
     QN: List[State]
     H_int: npt.NDArray[np.complex_]
     V_ref_int: npt.NDArray[np.complex_]
-    X_states_basis: Optional[List[State]] = None
-    B_states_basis: Optional[List[State]] = None
-    QN_basis: Optional[List[State]] = None
+    X_states_basis: List[CoupledBasisState]
+    B_states_basis: List[CoupledBasisState]
+    QN_basis: List[CoupledBasisState]
 
 
 def generate_total_reduced_hamiltonian(
@@ -295,7 +329,8 @@ def generate_total_reduced_hamiltonian(
     transform: npt.NDArray[np.complex128] = None,
     H_func_X: Optional[Callable] = None,
     H_func_B: Optional[Callable] = None,
-) -> ReducedHamiltonian:
+    use_omega_basis: bool = True,
+) -> ReducedHamiltonianTotal:
     """
     Generate the total reduced hamiltonian for all X and B states in X_states_approx and
     B_states_approx, from an X state hamiltonian for all states from Jmin_X to Jmax_X
@@ -337,11 +372,16 @@ def generate_total_reduced_hamiltonian(
         H_func_B (Optional[Callable], optional): Function to generate the B state
                                                     Hamiltonian for E and B. Defaults
                                                     to None.
+        use_omega_basis (Optional[bool]): Use Ω basis to calculate the B state
+                                            hamiltonian and then transform to P basis if
+                                            the P state is requested. Ω basis is faster
+                                            to calculate. Defaults to True.
 
     Returns:
         ReducedHamiltonian: Dataclass holding the X states, B states, total states,
                             Hamiltonian and reference eigenvectors
     """
+
     ground_states, H_X_red = generate_reduced_X_hamiltonian(
         X_states_approx,
         E=E,
@@ -356,8 +396,15 @@ def generate_total_reduced_hamiltonian(
         transform=transform,
     )
 
-    excited_states, H_B_red = generate_reduced_B_hamiltonian(
-        B_states_approx,
+    if use_omega_basis and B_states_approx[0].basis == Basis.CoupledP:
+        _B_states_approx = get_unique_basisstates_from_states(
+            [qn.transform_to_omega_basis() for qn in B_states_approx]
+        )
+    else:
+        _B_states_approx = B_states_approx
+
+    H_B_red = generate_reduced_B_hamiltonian(
+        _B_states_approx,
         E=E,
         B=B,
         rtol=rtol,
@@ -369,11 +416,42 @@ def generate_total_reduced_hamiltonian(
         H_func=H_func_B,
     )
 
-    H_int, V_ref_int = compose_reduced_hamiltonian(H_X_red, H_B_red)
+    if use_omega_basis and B_states_approx[0].basis == Basis.CoupledP:
+        excited_states = [
+            qn.transform_to_parity_basis().remove_small_components(stol)
+            for qn in H_B_red.QN_basis
+        ]
+
+        state_vecs = np.array(
+            [(1 * s).state_vector(excited_states) for s in B_states_approx]
+        )
+        excited_states_reduced = [
+            excited_states[idx] for idx in np.argmax(np.abs(state_vecs), axis=1)
+        ]
+
+        H_B_red_matrix = reduced_basis_hamiltonian(
+            excited_states, H_B_red.H, excited_states_reduced
+        )
+
+        excited_states = excited_states_reduced
+
+        H_int, V_ref_int = compose_reduced_hamiltonian(H_X_red, H_B_red_matrix)
+    else:
+        excited_states = H_B_red.QN_basis
+        H_int, V_ref_int = compose_reduced_hamiltonian(H_X_red, H_B_red.H)
 
     QN = ground_states.copy()
     QN.extend(excited_states)
-    return ReducedHamiltonian(ground_states, excited_states, QN, H_int, V_ref_int)
+    return ReducedHamiltonianTotal(
+        X_states=ground_states,
+        B_states=excited_states,
+        QN=QN,
+        H_int=H_int,
+        V_ref_int=V_ref_int,
+        X_states_basis=X_states_approx,
+        B_states_basis=B_states_approx,
+        QN_basis=list(X_states_approx) + list(B_states_approx),
+    )
 
 
 def generate_reduced_hamiltonian_transitions(
@@ -391,10 +469,12 @@ def generate_reduced_hamiltonian_transitions(
     nuclear_spins: TlFNuclearSpins = TlFNuclearSpins(),
     minimum_amplitude: float = 5e-3,
     minimum_coupling: float = 1e-3,
-) -> ReducedHamiltonian:
+    use_omega_basis: bool = True,
+) -> ReducedHamiltonianTotal:
     _J_ground: List[int] = []
     excited_states_selectors = []
 
+    # figure out which rotational levels to include
     for transition in transitions:
         if isinstance(transition, OpticalTransition):
             excited_states_approx_qn_select = transition.qn_select_excited
@@ -453,45 +533,24 @@ def generate_reduced_hamiltonian_transitions(
     ground_states_approx = list(
         generate_coupled_states_X(ground_states_approx_qn_select)
     )
-
-    ground_states, ground_hamiltonian = generate_reduced_X_hamiltonian(
-        X_states_approx=ground_states_approx,
-        E=E,
-        B=B,
-        rtol=rtol,
-        stol=stol,
-        Jmin=Jmin_X,
-        Jmax=Jmax_X,
-        constants=Xconstants,
-        nuclear_spins=nuclear_spins,
-    )
-
     excited_states_approx = list(generate_coupled_states_B(excited_states_selectors))
-    excited_states, excited_hamiltonian = generate_reduced_B_hamiltonian(
+
+    return generate_total_reduced_hamiltonian(
+        X_states_approx=ground_states_approx,
         B_states_approx=excited_states_approx,
         E=E,
         B=B,
         rtol=rtol,
-        Jmin=Jmin_B,
-        Jmax=Jmax_B,
-        constants=Bconstants,
+        stol=stol,
+        Jmin_X=Jmin_X,
+        Jmax_X=Jmax_X,
+        Jmin_B=Jmin_B,
+        Jmax_B=Jmax_B,
+        X_constants=Xconstants,
+        B_constants=Bconstants,
         nuclear_spins=nuclear_spins,
-    )
-
-    H_total, V_ref_total = compose_reduced_hamiltonian(
-        ground_hamiltonian, excited_hamiltonian
-    )
-
-    ground_states_approx = [1 * s for s in ground_states_approx]
-    excited_states_approx = [1 * s for s in excited_states_approx]
-
-    return ReducedHamiltonian(
-        X_states=ground_states,
-        B_states=excited_states,
-        QN=ground_states + excited_states,
-        H_int=H_total,
-        V_ref_int=V_ref_total,
-        X_states_basis=ground_states_approx,
-        B_states_basis=excited_states_approx,
-        QN_basis=ground_states_approx + excited_states_approx,
+        transform=None,
+        H_func_X=None,
+        H_func_B=None,
+        use_omega_basis=use_omega_basis,
     )

@@ -18,7 +18,8 @@ __all__ = [
     "check_approx_state_exact_state",
     "get_indices_quantumnumbers_base",
     "get_indices_quantumnumbers",
-    "get_unique_basisstates",
+    "get_unique_basisstates_from_basisstates",
+    "get_unique_basisstates_from_states",
 ]
 
 
@@ -155,7 +156,7 @@ def check_approx_state_exact_state(approx: State, exact: State) -> None:
 
 def find_exact_states_indices(
     states_approx: Sequence[State],
-    QN: Sequence[State],
+    QN_construct: Sequence[State],
     H: Optional[npt.NDArray[np.complex128]] = None,
     V: Optional[npt.NDArray[np.complex128]] = None,
     V_ref: Optional[npt.NDArray[np.complex128]] = None,
@@ -166,7 +167,7 @@ def find_exact_states_indices(
 
     Args:
         states_approx (Sequence[State]): approximate states to find the indices for
-        QN (Sequence[State]): states from which H was constructed
+        QN_construct (Sequence[State]): states from which H was constructed
         H (Optional[npt.NDArray[np.complex128]], optional): Hamiltonian. Defaults to None.
         V (Optional[npt.NDArray[np.complex128]], optional): Eigenvectors. Defaults to None.
         V_ref (Optional[npt.NDArray[np.complex128]], optional): Eigenvector order.
@@ -178,7 +179,7 @@ def find_exact_states_indices(
     # generating the state vectors for states_approx in the basis of QN, which is the
     # basis H was generated from. Note that this is not the actual basis of H, which
     # can be generated with QN and V, with the matrix_to_states function in .utils
-    state_vecs = np.asarray([s.state_vector(QN) for s in states_approx])
+    state_vecs = np.array([s.state_vector(QN_construct) for s in states_approx])
 
     # generate the eigenvectors if they were not provided
     if V is None:
@@ -187,7 +188,7 @@ def find_exact_states_indices(
     else:
         _V = V
     if V_ref is not None:
-        _, _V = reorder_evecs(_V, np.ones(len(QN), dtype=np.complex_), V_ref)
+        _, _V = reorder_evecs(_V, np.ones(len(QN_construct), dtype=np.complex_), V_ref)
 
     # calculating the overlaps between the state vectors of states_approx in the basis
     # from which H was generated with the eigenvectors of H
@@ -202,8 +203,8 @@ def find_exact_states_indices(
 
 def find_exact_states(
     states_approx: Sequence[State],
-    QN_approx: Sequence[State],
-    QN: Sequence[State],
+    QN_construct: Sequence[State],
+    QN_basis: Sequence[State],
     H: Optional[npt.NDArray[np.complex128]] = None,
     V: Optional[npt.NDArray[np.complex128]] = None,
     V_ref: Optional[npt.NDArray[np.complex128]] = None,
@@ -212,17 +213,17 @@ def find_exact_states(
 
     Args:
         states_approx (list): list of State objects to find the closest match to
-        QN_approx (list): list of State objects from which H was constructed
-        QN (list): list of State objects defining the basis for H
-        H (np.ndarray): Hamiltonian, diagonal in basis QN
-        V (np.ndarray): eigenvectors in basis QN
+        QN_construct (list): list of State objects from which H was constructed
+        QN_basis (list): list of State objects defining the basis for H
+        H (np.ndarray): Hamiltonian, diagonal in basis QN_basis
+        V (np.ndarray): eigenvectors in basis QN_basis
 
     Returns:
         list: list of eigenstates of H closest to states_approx
     """
 
-    indices = find_exact_states_indices(states_approx, QN_approx, H, V, V_ref)
-    return [QN[idx] for idx in indices]
+    indices = find_exact_states_indices(states_approx, QN_construct, H, V, V_ref)
+    return [QN_basis[idx] for idx in indices]
 
 
 @no_type_check
@@ -345,7 +346,7 @@ def get_indices_quantumnumbers(
         )
 
 
-def get_unique_basisstates(
+def get_unique_basisstates_from_basisstates(
     states: Union[Sequence[BasisState], npt.NDArray[Any]]
 ) -> Union[Sequence[BasisState], npt.NDArray[Any]]:
     """get a list/array of unique BasisStates in the states list/array
@@ -356,4 +357,22 @@ def get_unique_basisstates(
     Returns:
         Union[list, np.ndarray]: list/array of unique BasisStates
     """
+    assert isinstance(states[0], BasisState), "Not a sequence of BasisState objects"
     return get_unique_list(states)
+
+
+def get_unique_basisstates_from_states(states: Sequence[State]) -> Sequence[BasisState]:
+    """
+    get a Sequence of unique BasisStates in a sequence of State objects
+
+    Args:
+        states (Sequence[State]): Sequence of State objects
+
+    Returns:
+        Sequence[BasisState]: Sequence of unique BasisStates that comprise the input
+                                States
+    """
+    assert isinstance(states[0], State), "Not a sequence of State objects"
+    return get_unique_basisstates_from_basisstates(
+        [s for S in states for a, s in S.data]
+    )

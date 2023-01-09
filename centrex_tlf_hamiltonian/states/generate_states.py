@@ -11,7 +11,7 @@ from .constants import TlFNuclearSpins
 
 from .states import CoupledBasisState, ElectronicState, UncoupledBasisState, Basis
 from .utils import parity_X
-from .find_states import QuantumSelector, get_unique_basisstates
+from .find_states import QuantumSelector, get_unique_basisstates_from_basisstates
 
 __all__ = [
     "generate_uncoupled_states_ground",
@@ -272,7 +272,9 @@ def generate_coupled_states_X(
                     qns, nuclear_spins=nuclear_spins, basis=basis
                 )
             )
-        return np.asarray(get_unique_basisstates(np.concatenate(coupled_states)))
+        return np.asarray(
+            get_unique_basisstates_from_basisstates(np.concatenate(coupled_states))
+        )
     else:
         raise AssertionError(
             "qn_selector required to be of type QuantumSelector, list or np.ndarray"
@@ -325,7 +327,9 @@ def generate_coupled_states_B(
                     qns, nuclear_spins=nuclear_spins, basis=basis
                 )
             )
-        return np.asarray(get_unique_basisstates(np.concatenate(coupled_states)))
+        return np.asarray(
+            get_unique_basisstates_from_basisstates(np.concatenate(coupled_states))
+        )
     else:
         raise AssertionError(
             "qn_selector required to be of type QuantumSelector, list or np.ndarray"

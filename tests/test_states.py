@@ -128,7 +128,7 @@ def test_get_indices_quantumnumbers():
 def test_get_unique_basisstates():
     QN_original = states.generate_coupled_states_ground(Js=[0, 1])
     QN = np.append(QN_original, QN_original)
-    QN_unique = states.get_unique_basisstates(QN)
+    QN_unique = states.get_unique_basisstates_from_basisstates(QN)
     assert np.all(QN_original == QN_unique)
 
 
