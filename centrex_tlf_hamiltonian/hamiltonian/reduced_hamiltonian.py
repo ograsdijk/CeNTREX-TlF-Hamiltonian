@@ -1,4 +1,4 @@
-import logging
+import warnings
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
@@ -81,7 +81,7 @@ def generate_diagonalized_hamiltonian(
 class ReducedHamiltonian:
     H: npt.NDArray[np.complex128]
     V: npt.NDArray[np.complex128]
-    QN_basis: Sequence[CoupledBasisState]
+    QN_basis: Sequence[State]
     QN_construct: Sequence[CoupledBasisState]
 
     def __iter__(self):
@@ -265,9 +265,10 @@ def generate_reduced_B_hamiltonian(
     QN_B_diag = matrix_to_states(H_diagonalized.V, QN_B)
 
     if omega_basis_flag:
-        logging.warning(
+        warnings.warn(
             "generate_reduced_B_hamiltonian called in Ω basis; mapping states to "
-            "approximate states not implemented. Hamiltonian is not reduced."
+            "approximate states not implemented. Hamiltonian is not reduced.",
+            SyntaxWarning,
         )
         excited_states = [es.remove_small_components(stol) for es in QN_B_diag]
     else:
@@ -403,18 +404,20 @@ def generate_total_reduced_hamiltonian(
     else:
         _B_states_approx = B_states_approx
 
-    H_B_red = generate_reduced_B_hamiltonian(
-        _B_states_approx,
-        E=E,
-        B=B,
-        rtol=rtol,
-        stol=stol,
-        Jmin=Jmin_B,
-        Jmax=Jmax_B,
-        constants=B_constants,
-        nuclear_spins=nuclear_spins,
-        H_func=H_func_B,
-    )
+    with warnings.catch_warnings() as warn:
+        warnings.simplefilter("ignore")
+        H_B_red = generate_reduced_B_hamiltonian(
+            _B_states_approx,
+            E=E,
+            B=B,
+            rtol=rtol,
+            stol=stol,
+            Jmin=Jmin_B,
+            Jmax=Jmax_B,
+            constants=B_constants,
+            nuclear_spins=nuclear_spins,
+            H_func=H_func_B,
+        )
 
     if use_omega_basis and B_states_approx[0].basis == Basis.CoupledP:
         excited_states = [
