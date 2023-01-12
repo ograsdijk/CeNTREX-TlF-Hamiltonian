@@ -1,8 +1,14 @@
-import numpy as np
-from centrex_tlf_hamiltonian import states, hamiltonian, transitions
 import pickle
-from pathlib import Path
 import warnings
+from pathlib import Path
+
+import numpy as np
+
+from centrex_tlf_hamiltonian import hamiltonian, states
+from centrex_tlf_hamiltonian.hamiltonian.reduced_hamiltonian import (
+    ReducedHamiltonian,
+    ReducedHamiltonianTotal,
+)
 
 
 def test_generate_reduced_X_hamiltonian():
@@ -77,9 +83,7 @@ def test_generate_reduced_B_hamiltonian_parity():
     )
 
     with open(Path(__file__).parent / "B_reduced_parity.pkl", "rb") as f:
-        H_reduced_parity_test: hamiltonian.reduced_hamiltonian.ReducedHamiltonian = (
-            pickle.load(f)
-        )
+        H_reduced_parity_test: ReducedHamiltonian = pickle.load(f)
 
     assert np.allclose(H_reduced_parity.H, H_reduced_parity_test.H)
     assert np.allclose(H_reduced_parity.V, H_reduced_parity_test.V)
@@ -117,9 +121,7 @@ def test_generate_total_reduced_hamiltonian():
     )
 
     with open(Path(__file__).parent / "H_reduced_total.pkl", "rb") as f:
-        H_reduced_total_test: hamiltonian.reduced_hamiltonian.ReducedHamiltonianTotal = pickle.load(
-            f
-        )
+        H_reduced_total_test: ReducedHamiltonianTotal = pickle.load(f)
 
     assert np.allclose(H_reduced_total.H_int, H_reduced_total_test.H_int)
     assert np.allclose(H_reduced_total.V_ref_int, H_reduced_total_test.V_ref_int)
@@ -128,10 +130,7 @@ def test_generate_total_reduced_hamiltonian():
     assert H_reduced_total.QN_basis == H_reduced_total_test.QN_basis
 
     state_vectors = np.array(
-        [
-            s.state_vector(H_reduced_total.QN)
-            for s in H_reduced_total_test.QN
-        ]
+        [s.state_vector(H_reduced_total.QN) for s in H_reduced_total_test.QN]
     )
 
-    assert np.allclose(np.trace(state_vectors), len(state_vectors), rtol = 1e-6)
+    assert np.allclose(np.trace(state_vectors), len(state_vectors), rtol=1e-6)

@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 from scipy.constants import physical_constants
 from centrex_tlf_hamiltonian import states, hamiltonian
 from centrex_tlf_hamiltonian.states.states import ElectronicState
@@ -16,9 +15,6 @@ def test_gfactor_B_hamiltonian():
 
     # create a function outputting the hamiltonian as a function of E and B
     Hfunc = hamiltonian.generate_coupled_hamiltonian_B_function(H)
-
-    # V/cm
-    Ez = np.linspace(-1_000, 1_000, 101)
 
     # generate the Hamiltonian for (almost) zero field, add a small field to make states
     # non-degenerate
