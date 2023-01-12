@@ -6,6 +6,7 @@ from centrex_tlf_hamiltonian.states import CoupledBasisState, State
 from ..constants import BConstants
 from ..wigner import sixj_f, threej_f
 
+
 @lru_cache(maxsize=int(1e6))
 def mu_p(psi: CoupledBasisState, p: int, constants: BConstants) -> State:
     """
@@ -79,12 +80,14 @@ def mu_p(psi: CoupledBasisState, p: int, constants: BConstants) -> State:
 
     return State(data)
 
+
 @lru_cache(maxsize=int(1e6))
 def HZx(psi: CoupledBasisState, constants: BConstants) -> State:
     """
     Zeeman Hamiltonian operator for x-component of magnetic field
     """
     return -(mu_p(psi, -1, constants) - mu_p(psi, +1, constants)) / np.sqrt(2)
+
 
 @lru_cache(maxsize=int(1e6))
 def HZy(psi: CoupledBasisState, constants: BConstants) -> State:
@@ -93,10 +96,10 @@ def HZy(psi: CoupledBasisState, constants: BConstants) -> State:
     """
     return -1j * (mu_p(psi, -1, constants) + mu_p(psi, +1, constants)) / np.sqrt(2)
 
+
 @lru_cache(maxsize=int(1e6))
 def HZz(psi: CoupledBasisState, constants: BConstants) -> State:
     """
     Zeeman Hamiltonian for z-component of magnetic field
     """
     return -mu_p(psi, 0, constants)
-

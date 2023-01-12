@@ -6,6 +6,7 @@ from centrex_tlf_hamiltonian.states import CoupledBasisState, State
 from ..constants import BConstants
 from ..wigner import sixj_f, threej_f
 
+
 @lru_cache(maxsize=int(1e6))
 def H_mhf_Tl(psi: CoupledBasisState, constants: BConstants) -> State:
     """
@@ -33,7 +34,8 @@ def H_mhf_Tl(psi: CoupledBasisState, constants: BConstants) -> State:
     # Initialize container for storing states and matrix elements
     data = []
 
-    # Loop over the possible values of quantum numbers for which the matrix element can be non-zero
+    # Loop over the possible values of quantum numbers for which the matrix element can
+    # be non-zero
     # Need J = Jp+1 ... |Jp-1|
     for J in np.arange(np.abs(Jp - 1), Jp + 2):
         # Calculate matrix element
@@ -62,6 +64,7 @@ def H_mhf_Tl(psi: CoupledBasisState, constants: BConstants) -> State:
 
     return State(data)
 
+
 @lru_cache(maxsize=int(1e6))
 def H_mhf_F(psi: CoupledBasisState, constants: BConstants) -> State:
     """
@@ -88,7 +91,8 @@ def H_mhf_F(psi: CoupledBasisState, constants: BConstants) -> State:
     # Initialize container for storing states and matrix elements
     data = []
 
-    # Loop over the possible values of quantum numbers for which the matrix element can be non-zero
+    # Loop over the possible values of quantum numbers for which the matrix element can
+    # be non-zero
     # Need J = Jp+1 ... |Jp-1|
     for J in np.arange(np.abs(Jp - 1), Jp + 2):
         # F1 can be J +/- 1/2

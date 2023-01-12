@@ -125,7 +125,8 @@ def generate_reduced_X_hamiltonian(
         Jmax (Optional[int], optional): Maximum J to include in the Hamiltonian.
                                         Defaults to None.
         constants (XConstants, optional): X state constants. Defaults to XConstants().
-        nuclear_spins (TlFNuclearSpins, optional): TlF nuclear spins. Defaults to TlFNuclearSpins().
+        nuclear_spins (TlFNuclearSpins, optional): TlF nuclear spins. Defaults to
+                                                                    TlFNuclearSpins().
         transform (npt.NDArray[np.complex_], optional): Transformation matrix from
                                                         uncoupled to coupled for J
                                                         states from Jmin to Jmax.
@@ -157,8 +158,10 @@ def generate_reduced_X_hamiltonian(
         S_transform = generate_transform_matrix(QN, QNc)
     else:
         assert transform.shape[0] == len(QN), (
-            f"shape of transform incorrect; requires {len(QN), len(QN)}, "
-            f"not {transform.shape}",
+            (
+                f"shape of transform incorrect; requires {len(QN), len(QN)}, "
+                f"not {transform.shape}"
+            ),
         )
         S_transform = transform
 
@@ -179,7 +182,7 @@ def generate_reduced_X_hamiltonian(
         list(QNc),
         QN_diag,
         V=H_diagonalized.V,
-        # V_ref=H_diagonalized.V_ref,
+        # V_ref=H_diagonalized.V_ref_,
     )
     ground_states = [gs.remove_small_components(stol) for gs in ground_states]
 
@@ -225,7 +228,8 @@ def generate_reduced_B_hamiltonian(
         Jmax (Optional[int], optional): Maximum J to include in the Hamiltonian.
                                         Defaults to None.
         constants (BConstants, optional): B state constants. Defaults to BConstants().
-        nuclear_spins (TlFNuclearSpins, optional): TlF nuclear spins. Defaults to TlFNuclearSpins().
+        nuclear_spins (TlFNuclearSpins, optional): TlF nuclear spins. Defaults to
+                                                    TlFNuclearSpins().
         H_func (Optional[Callable], optional): Function to generate the Hamiltonian
                                                 depending on E and B. Defaults to None.
 
@@ -246,7 +250,7 @@ def generate_reduced_B_hamiltonian(
         omega_basis_flag = True
     else:
         raise TypeError(
-            f"B_states_approx basis invalid, CoupledP or CoupledΩ are allowed, not "
+            "B_states_approx basis invalid, CoupledP or CoupledΩ are allowed, not "
             f"{B_states_approx[0].basis}"
         )
     QN_B = list(generate_coupled_states_B(qn_select, nuclear_spins=nuclear_spins))
@@ -266,8 +270,10 @@ def generate_reduced_B_hamiltonian(
 
     if omega_basis_flag:
         warnings.warn(
-            "generate_reduced_B_hamiltonian called in Ω basis; mapping states to "
-            "approximate states not implemented. Hamiltonian is not reduced.",
+            (
+                "generate_reduced_B_hamiltonian called in Ω basis; mapping states to "
+                "approximate states not implemented. Hamiltonian is not reduced."
+            ),
             SyntaxWarning,
         )
         excited_states = [es.remove_small_components(stol) for es in QN_B_diag]
@@ -404,7 +410,7 @@ def generate_total_reduced_hamiltonian(
     else:
         _B_states_approx = B_states_approx
 
-    with warnings.catch_warnings() as warn:
+    with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         H_B_red = generate_reduced_B_hamiltonian(
             _B_states_approx,

@@ -168,8 +168,10 @@ def find_exact_states_indices(
     Args:
         states_approx (Sequence[State]): approximate states to find the indices for
         QN_construct (Sequence[State]): states from which H was constructed
-        H (Optional[npt.NDArray[np.complex128]], optional): Hamiltonian. Defaults to None.
-        V (Optional[npt.NDArray[np.complex128]], optional): Eigenvectors. Defaults to None.
+        H (Optional[npt.NDArray[np.complex128]], optional): Hamiltonian. Defaults to
+                                                                                None.
+        V (Optional[npt.NDArray[np.complex128]], optional): Eigenvectors. Defaults to
+                                                                                None.
         V_ref (Optional[npt.NDArray[np.complex128]], optional): Eigenvector order.
                                                                 Defaults to None.
 
