@@ -1,18 +1,13 @@
-from ast import Assert
-from functools import partial
 from dataclasses import dataclass
-from typing import Callable, Sequence, Any, Union, List
+from functools import partial
+from typing import Any, Callable, List, Sequence, Union
 
 import numpy as np
 import numpy.typing as npt
-from centrex_tlf_hamiltonian.states import (
-    CoupledBasisState,
-    UncoupledBasisState,
-    Basis,
-    State,
-)
 
-from . import B_coupled, X_uncoupled, B_coupled_Omega
+from centrex_tlf_hamiltonian.states import Basis, CoupledBasisState, UncoupledBasisState
+
+from . import B_coupled_Omega, X_uncoupled
 from .constants import BConstants, HamiltonianConstants, XConstants
 
 __all__ = [

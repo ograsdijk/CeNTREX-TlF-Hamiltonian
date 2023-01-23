@@ -1,9 +1,9 @@
 from functools import lru_cache
-from typing import Tuple, Sequence, Union, Any
+from typing import Any, Sequence, Tuple, Union
+
 import numpy as np
 import numpy.typing as npt
 from sympy.physics.quantum.cg import CG
-
 
 __all__ = ["CGc", "parity_X", "reorder_evecs"]
 

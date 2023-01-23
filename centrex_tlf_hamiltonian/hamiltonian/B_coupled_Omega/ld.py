@@ -38,6 +38,7 @@ def H_LD(psi: CoupledBasisState, constants: BConstants) -> State:
 
     return State([(amp, ket)])
 
+
 @lru_cache(maxsize=int(1e6))
 def H_cp1_Tl(psi: CoupledBasisState, constants: BConstants) -> State:
     """
