@@ -1,3 +1,5 @@
+This repo is now archived; see `CeNTREX-TlF` and `CeNTREX-TlF-julia-extension` for the functionality of this package combined with `CeNTREX-TlF-Couplings` and `CeNTREX-TlF-Lindblad`
+
 # CeNTREX-TlF-Hamiltonian
 Code for generating the CeNTREX TlF States and Hamiltonians
 
